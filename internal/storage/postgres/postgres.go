@@ -175,11 +175,11 @@ func (s *Storage) CreateOrder(ctx context.Context, number string, login string) 
 
 }
 
-// получает заказы в статусе REGISTERED
+// получает заказы в статусе REGISTERED или PROCESSING
 func (s *Storage) GetRegisteresOrders(ctx context.Context) ([]string, error) {
 
 	var orders []string
-	rows, err := s.pool.Query(ctx, `SELECT number FROM orders WHERE status = 'REGISTERED';`)
+	rows, err := s.pool.Query(ctx, `SELECT number FROM orders WHERE status = 'REGISTERED' OR status = 'PROCESSING';`)
 	if err != nil {
 		logger.Log.Sugar().Errorf("Не удалось выполнить запрос: %s", err)
 		return nil, ErrRegisteresOrders
@@ -238,7 +238,7 @@ func (s *Storage) UpdateOrderAndAccrualPoints(ctx context.Context, orderData *lo
 		if err != nil {
 			return ErrUpdate
 		}
-	} else if orderData.Status == "INVALID" {
+	} else if orderData.Status == "INVALID" || orderData.Status == "PROCESSING" {
 		// Обновляем статус заказа без начисления баллов
 		_, err = tx.Exec(ctx, `
             UPDATE orders SET status = $1 WHERE number = $2;
@@ -258,10 +258,10 @@ func (s *Storage) UpdateOrderAndAccrualPoints(ctx context.Context, orderData *lo
 }
 
 // получает заказов пользователя
-func (s *Storage) GetUserOrders(ctx context.Context, user_login string) ([]models.Order, error) {
+func (s *Storage) GetUserOrders(ctx context.Context, userLogin string) ([]models.Order, error) {
 
 	var orders []models.Order
-	rows, err := s.pool.Query(ctx, `SELECT number, status, accrual, uploaded_at FROM orders WHERE user_login = $1 ORDER BY uploaded_at desc;`, user_login)
+	rows, err := s.pool.Query(ctx, `SELECT number, status, accrual, uploaded_at FROM orders WHERE user_login = $1 ORDER BY uploaded_at desc;`, userLogin)
 	if err != nil {
 		logger.Log.Sugar().Errorf("Не удалось выполнить запрос: %s", err)
 		return nil, ErrSelect
@@ -290,9 +290,9 @@ func (s *Storage) GetUserOrders(ctx context.Context, user_login string) ([]model
 }
 
 // получает баланс пользователя
-func (s *Storage) GetUserBalance(ctx context.Context, user_login string) (models.Balance, error) {
+func (s *Storage) GetUserBalance(ctx context.Context, userLogin string) (models.Balance, error) {
 	var userBalance models.Balance
-	row := s.pool.QueryRow(ctx, `SELECT current, withdrawn FROM user_balance WHERE user_login = $1;`, user_login)
+	row := s.pool.QueryRow(ctx, `SELECT current, withdrawn FROM user_balance WHERE user_login = $1;`, userLogin)
 
 	err := row.Scan(&userBalance.Current, &userBalance.Withdrawn)
 	if err != nil {
@@ -305,7 +305,7 @@ func (s *Storage) GetUserBalance(ctx context.Context, user_login string) (models
 }
 
 // в рамках транзакции списание баллов с баланса и создании записи об этом
-func (s *Storage) Withdrow(ctx context.Context, sum float64, user_login string, order string) error {
+func (s *Storage) Withdrow(ctx context.Context, sum float64, userLogin string, order string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -327,7 +327,7 @@ func (s *Storage) Withdrow(ctx context.Context, sum float64, user_login string, 
 
 	_, err = tx.Exec(ctx, `
 		UPDATE user_balance SET current = current - $1, withdrawn = withdrawn + $2 WHERE user_login = $3;
-    `, sum, sum, user_login)
+    `, sum, sum, userLogin)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if ok := errors.As(err, &pgErr); ok {
@@ -342,7 +342,7 @@ func (s *Storage) Withdrow(ctx context.Context, sum float64, user_login string, 
 
 	_, err = tx.Exec(ctx, `
 		INSERT INTO withdrawals ("order", sum, user_login) VALUES ($1, $2, $3) ;
-    `, order, sum, user_login)
+    `, order, sum, userLogin)
 	if err != nil {
 		return ErrUpdate
 	}
@@ -356,10 +356,10 @@ func (s *Storage) Withdrow(ctx context.Context, sum float64, user_login string, 
 }
 
 // получает инфо о выводах средств
-func (s *Storage) GetUserWithdrawals(ctx context.Context, user_login string) ([]models.Withdrawn, error) {
+func (s *Storage) GetUserWithdrawals(ctx context.Context, userLogin string) ([]models.Withdrawn, error) {
 
 	var withdrawals []models.Withdrawn
-	rows, err := s.pool.Query(ctx, `SELECT "order", sum, proccesed_at FROM withdrawals WHERE user_login = $1 ORDER BY proccesed_at desc;`, user_login)
+	rows, err := s.pool.Query(ctx, `SELECT "order", sum, proccesed_at FROM withdrawals WHERE user_login = $1 ORDER BY proccesed_at desc;`, userLogin)
 	if err != nil {
 		logger.Log.Sugar().Errorf("Не удалось выполнить запрос: %s", err)
 		return nil, ErrSelect

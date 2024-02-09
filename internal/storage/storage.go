@@ -18,8 +18,8 @@ type Provider interface {
 	CreateOrder(ctx context.Context, number string, login string) error
 	GetRegisteresOrders(ctx context.Context) ([]string, error)
 	UpdateOrderAndAccrualPoints(ctx context.Context, orderData *loyalty.OrderResponse) error
-	GetUserOrders(ctx context.Context, user_login string) ([]models.Order, error)
-	GetUserBalance(ctx context.Context, user_login string) (models.Balance, error)
-	Withdrow(ctx context.Context, sum float64, user_login string, order string) error
-	GetUserWithdrawals(ctx context.Context, user_login string) ([]models.Withdrawn, error)
+	GetUserOrders(ctx context.Context, userLogin string) ([]models.Order, error)
+	GetUserBalance(ctx context.Context, userLogin string) (models.Balance, error)
+	Withdrow(ctx context.Context, sum float64, userLogin string, order string) error
+	GetUserWithdrawals(ctx context.Context, userLogin string) ([]models.Withdrawn, error)
 }
