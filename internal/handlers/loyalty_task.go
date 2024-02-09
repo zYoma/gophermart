@@ -19,7 +19,7 @@ func (h *HandlerService) UpdateOrdersStatus(wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	// будем проверять заказы в статусе REGISTERED раз в минуту
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 
 	// Канал для перехвата сигналов завершения работы
 	sigChan := make(chan os.Signal, 1)
