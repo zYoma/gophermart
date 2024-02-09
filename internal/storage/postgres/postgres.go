@@ -261,7 +261,7 @@ func (s *Storage) UpdateOrderAndAccrualPoints(ctx context.Context, orderData *lo
 func (s *Storage) GetUserOrders(ctx context.Context, user_login string) ([]models.Order, error) {
 
 	var orders []models.Order
-	rows, err := s.pool.Query(ctx, `SELECT number, status, accrual, updated_at FROM orders WHERE user_login = $1 ORDER BY uploaded_at desc;`, user_login)
+	rows, err := s.pool.Query(ctx, `SELECT number, status, accrual, uploaded_at FROM orders WHERE user_login = $1 ORDER BY uploaded_at desc;`, user_login)
 	if err != nil {
 		logger.Log.Sugar().Errorf("Не удалось выполнить запрос: %s", err)
 		return nil, ErrSelect

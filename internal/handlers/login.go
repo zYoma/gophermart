@@ -45,9 +45,8 @@ func (h *HandlerService) Login(w http.ResponseWriter, r *http.Request) {
 		render.JSON(w, r, models.Error("error create user"))
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	w.WriteHeader(http.StatusOK)
 	response := models.AccessToken{Token: token, TokenType: "Bearer"}
 
 	render.JSON(w, r, &response)

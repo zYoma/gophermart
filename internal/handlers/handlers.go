@@ -29,7 +29,7 @@ func (h *HandlerService) GetRouter() chi.Router {
 		r.Post("/api/user/orders", h.CreateOrder)
 		r.Get("/api/user/orders", h.GetOrders)
 		r.Get("/api/user/balance", h.GetBalance)
-		r.Post("/api/user/withdraw", h.WithdrowPoints)
+		r.Post("/api/user/balance/withdraw", h.WithdrowPoints)
 		r.Get("/api/user/withdrawals", h.GetWithdrawals)
 	})
 
