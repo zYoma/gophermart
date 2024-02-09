@@ -10,3 +10,4 @@ mock:
 
 makemigrate:
 	goose -dir ./internal/storage/migrations create $(name) sql
+	
