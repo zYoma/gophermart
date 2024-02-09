@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/render"
@@ -46,6 +47,7 @@ func (h *HandlerService) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	response := models.AccessToken{Token: token, TokenType: "Bearer"}
 
 	render.JSON(w, r, &response)
