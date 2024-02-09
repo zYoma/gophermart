@@ -23,7 +23,6 @@ func (h *HandlerService) Registration(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := decodeAndValidateBody(w, r, &credentials); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -68,11 +67,13 @@ func decodeAndValidateBody(w http.ResponseWriter, r *http.Request, dst interface
 	err := render.DecodeJSON(r.Body, dst)
 	if errors.Is(err, io.EOF) {
 		logger.Log.Error("request body is empty")
+		w.WriteHeader(http.StatusBadRequest)
 		render.JSON(w, r, models.Error("empty request"))
 		return err
 	}
 	if err != nil {
 		logger.Log.Error("cannot decode request JSON body", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
 		render.JSON(w, r, models.Error("failed to decode request"))
 		return err
 	}
@@ -81,6 +82,7 @@ func decodeAndValidateBody(w http.ResponseWriter, r *http.Request, dst interface
 	if err := validate.Struct(dst); err != nil {
 		validateErr := err.(validator.ValidationErrors)
 		logger.Log.Error("request validate error", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
 		render.JSON(w, r, models.ValidationError(validateErr))
 		return err
 	}

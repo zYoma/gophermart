@@ -298,7 +298,7 @@ func (s *Storage) GetUserBalance(ctx context.Context, userLogin string) (models.
 	if err != nil {
 		// Другая ошибка выполнения запроса
 		logger.Log.Sugar().Errorf("Не удалось выполнить запрос: %s", err)
-		return models.Balance{}, err // Используйте ErrSelect или другую соответствующую ошибку
+		return models.Balance{}, err
 	}
 
 	return userBalance, nil

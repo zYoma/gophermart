@@ -40,7 +40,7 @@ func (h *HandlerService) WithdrowPoints(w http.ResponseWriter, r *http.Request) 
 	err = h.provider.Withdrow(r.Context(), orderSum.Sum, userID, orderSum.Order)
 	if err != nil {
 		if errors.Is(err, postgres.ErrFewPoints) {
-			w.WriteHeader(http.StatusUnprocessableEntity)
+			w.WriteHeader(http.StatusPaymentRequired)
 			render.JSON(w, r, models.Error("there are not enough points on balance"))
 			return
 		}
