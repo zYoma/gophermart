@@ -19,11 +19,8 @@ import (
 )
 
 var ErrCreatePool = errors.New("unable to create connection pool")
-var ErrPing = errors.New("checking connection to the database")
-var ErrURLNotFound = errors.New("url not found")
 var ErrCreateUser = errors.New("crerate user")
 var ErrCreateUserBalance = errors.New("crerate user balance")
-var ErrCreateTable = errors.New("creating tables")
 var ErrConflict = errors.New("url already exist")
 var ErrRegisteresOrders = errors.New("select from database")
 var ErrOrderAlredyExist = errors.New("alredy exist")
