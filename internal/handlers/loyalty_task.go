@@ -82,5 +82,5 @@ func (h *HandlerService) orderProccessed(order string) {
 		logger.Log.Error("не удалось обновить заказ", zap.Error(err))
 	}
 
-	logger.Log.Sugar().Infof("заказ %s обработан", order)
+	logger.Log.Sugar().Infof("заказ %s обработан. Записан статус: %s", order, orderResp.Status)
 }
