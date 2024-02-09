@@ -155,7 +155,7 @@ func (s *Storage) CreateOrder(ctx context.Context, number string, login string) 
 		ON CONFLICT (number, user_login) DO UPDATE
 		SET user_login = EXCLUDED.user_login, updated_at = NOW()
         RETURNING user_login, (xmax = 0) AS is_created;
-    `, number, login, "REGISTERED")
+    `, number, login, "PROCESSING")
 
 	err := row.Scan(&userLogin, &isCreated)
 	if err != nil {
