@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose"
+	"github.com/shopspring/decimal"
 	"github.com/zYoma/gophermart/internal/config"
 	"github.com/zYoma/gophermart/internal/integrations/loyalty"
 	"github.com/zYoma/gophermart/internal/logger"
@@ -304,7 +305,7 @@ func (s *Storage) GetUserBalance(ctx context.Context, userLogin string) (models.
 }
 
 // в рамках транзакции списание баллов с баланса и создании записи об этом
-func (s *Storage) Withdrow(ctx context.Context, sum float64, userLogin string, order string) error {
+func (s *Storage) Withdrow(ctx context.Context, sum decimal.Decimal, userLogin string, order string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 

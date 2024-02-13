@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -28,12 +29,12 @@ func TestHandlerService_GetWithdrawals(t *testing.T) {
 	mockWithdrawals := []models.Withdrawn{
 		{
 			Order:       "123",
-			Sum:         500,
+			Sum:         decimal.NewFromFloat(500),
 			ProccesedAt: time.Now(),
 		},
 		{
 			Order:       "456",
-			Sum:         600,
+			Sum:         decimal.NewFromFloat(600),
 			ProccesedAt: time.Now().Add(-48 * time.Hour),
 		},
 	}

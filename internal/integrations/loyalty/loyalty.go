@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/shopspring/decimal"
 	"github.com/zYoma/gophermart/internal/logger"
 	"go.uber.org/zap"
 )
@@ -20,9 +21,9 @@ const (
 )
 
 type OrderResponse struct {
-	Order   string      `json:"order"`
-	Status  OrderStatus `json:"status"`
-	Accrual *float64    `json:"accrual,omitempty"`
+	Order   string           `json:"order"`
+	Status  OrderStatus      `json:"status"`
+	Accrual *decimal.Decimal `json:"accrual,omitempty"`
 }
 
 var ErrRequest = errors.New("request to loyalty")

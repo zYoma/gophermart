@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/shopspring/decimal"
 )
 
 type ErrorResponse struct {
@@ -55,28 +56,28 @@ type AccessToken struct {
 }
 
 type Order struct {
-	Number     string    `json:"number"`
-	Status     string    `json:"status"`
-	Accrual    *float64  `json:"accrual,omitempty"`
-	UploadedAt time.Time `json:"uploaded_at"`
+	Number     string           `json:"number"`
+	Status     string           `json:"status"`
+	Accrual    *decimal.Decimal `json:"accrual,omitempty"`
+	UploadedAt time.Time        `json:"uploaded_at"`
 }
 
 type Orders []Order
 
 type Balance struct {
-	Current   float64 `json:"current"`
-	Withdrawn float64 `json:"withdrawn"`
+	Current   decimal.Decimal `json:"current"`
+	Withdrawn decimal.Decimal `json:"withdrawn"`
 }
 
 type OrderSum struct {
-	Order string  `json:"order"`
-	Sum   float64 `json:"sum"`
+	Order string          `json:"order"`
+	Sum   decimal.Decimal `json:"sum"`
 }
 
 type Withdrawn struct {
-	Order       string    `json:"order"`
-	Sum         float64   `json:"sum"`
-	ProccesedAt time.Time `json:"proccesed_at"`
+	Order       string          `json:"order"`
+	Sum         decimal.Decimal `json:"sum"`
+	ProccesedAt time.Time       `json:"proccesed_at"`
 }
 
 type Withdrawals []Withdrawn

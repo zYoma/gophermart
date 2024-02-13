@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -25,8 +26,8 @@ func TestHandlerService_GetOrders(t *testing.T) {
 	token2, _ := jwt.BuildJWTString("jack", cfg.TokenSecret)
 
 	// Настройка поведения моков
-	accrualValue1 := 400.0
-	accrualValue2 := 500.0
+	accrualValue1 := decimal.NewFromFloat(400.0)
+	accrualValue2 := decimal.NewFromFloat(500.0)
 	mockOrders := []models.Order{
 		{
 			Number:     "123",
