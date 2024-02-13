@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"sync"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -42,9 +41,8 @@ var (
 const MigrationDir = "./internal/storage/migrations"
 
 type Storage struct {
-	db    *sql.DB
-	pool  *pgxpool.Pool
-	mutex sync.Mutex
+	db   *sql.DB
+	pool *pgxpool.Pool
 }
 
 func New(cfg *config.Config) (storage.StorageProvider, error) {
@@ -305,8 +303,6 @@ func (s *Storage) GetUserBalance(ctx context.Context, userLogin string) (models.
 
 // в рамках транзакции списание баллов с баланса и создании записи об этом
 func (s *Storage) Withdrow(ctx context.Context, sum float64, userLogin string, order string) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
 
 	// Начало транзакции
 	tx, err := s.pool.Begin(ctx)

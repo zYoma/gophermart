@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/signal"
 	"sync"
@@ -66,8 +67,12 @@ func (h *HandlerService) getOrders(ctx context.Context) []string {
 func (h *HandlerService) orderProccessed(ctx context.Context, order string) {
 	orderResp, err := loyalty.GetPointsByOrder(fmt.Sprintf("%s/api/orders/%s", h.cfg.AcrualURL, order))
 	if err != nil {
-		logger.Log.Error("не удалось получить данные по заказу", zap.Error(err))
-		return
+		if errors.Is(err, loyalty.ErrNotFound) {
+			orderResp = &loyalty.OrderResponse{Order: order, Status: "INVALID"}
+		} else {
+			logger.Log.Error("не удалось получить данные по заказу", zap.Error(err))
+			return
+		}
 	}
 
 	// обмновляем данные по заказу и пополняем баланс пользователя

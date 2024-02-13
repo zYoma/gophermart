@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/zYoma/gophermart/internal/logger"
 	"go.uber.org/zap"
@@ -25,11 +27,14 @@ type OrderResponse struct {
 	Accrual *float64    `json:"accrual,omitempty"`
 }
 
-var ErrRequest = errors.New("request to loyalty")
-var ErrReadBody = errors.New("read body")
-var ErrUnmarshal = errors.New("unmarshal response")
-var ErrStatus = errors.New("bad order status")
-var ErrStatusCode = errors.New("not success status")
+var (
+	ErrRequest    = errors.New("request to loyalty")
+	ErrReadBody   = errors.New("read body")
+	ErrUnmarshal  = errors.New("unmarshal response")
+	ErrStatus     = errors.New("bad order status")
+	ErrStatusCode = errors.New("not success status")
+	ErrNotFound   = errors.New("order not found")
+)
 
 // isValid проверяет, является ли статус заказа допустимым.
 func (s OrderStatus) isValid() bool {
@@ -42,34 +47,56 @@ func (s OrderStatus) isValid() bool {
 }
 
 func GetPointsByOrder(url string) (*OrderResponse, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		logger.Log.Error("ошибка при выполнении запроса", zap.Error(err))
-		return nil, ErrRequest
-	}
-	defer resp.Body.Close()
+	for {
+		resp, err := http.Get(url)
+		if err != nil {
+			logger.Log.Error("ошибка при выполнении запроса", zap.Error(err))
+			return nil, ErrRequest
+		}
+		// повторяем запрос при статусе 429
+		if resp.StatusCode == http.StatusTooManyRequests {
+			retryAfter := resp.Header.Get("Retry-After")
+			delaySeconds, err := strconv.Atoi(retryAfter)
+			if err != nil {
+				logger.Log.Sugar().Infof("ошибка при чтении заголовка Retry-After", err)
+				resp.Body.Close()
+				return nil, ErrStatusCode
+			}
+			logger.Log.Sugar().Infof("Получен статус 429, повтор запроса через %d секунд\n", delaySeconds)
+			resp.Body.Close()
+			time.Sleep(time.Duration(delaySeconds) * time.Second)
+			continue
+		}
 
-	if resp.StatusCode != http.StatusOK {
-		logger.Log.Sugar().Infof("сервер вернул статус-код: %d, url: %s", resp.StatusCode, url)
-		return nil, ErrStatusCode
-	}
+		defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Log.Error("ошибка при чтении тела ответа", zap.Error(err))
-		return nil, ErrReadBody
-	}
+		if resp.StatusCode != http.StatusOK {
+			// если заказ не найден
+			if resp.StatusCode == http.StatusNoContent {
+				logger.Log.Sugar().Infof("заказ не найден, url: %s", url)
+				return nil, ErrNotFound
+			}
+			logger.Log.Sugar().Infof("сервер вернул статус-код: %d, url: %s", resp.StatusCode, url)
+			return nil, ErrStatusCode
+		}
 
-	var orderResp OrderResponse
-	if err := json.Unmarshal(body, &orderResp); err != nil {
-		logger.Log.Error("ошибка при десериализации ответа", zap.Error(err))
-		return nil, ErrUnmarshal
-	}
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			logger.Log.Error("ошибка при чтении тела ответа", zap.Error(err))
+			return nil, ErrReadBody
+		}
 
-	if !orderResp.Status.isValid() {
-		logger.Log.Sugar().Infof("недопустимый статус заказа: %s, url: %s", orderResp.Status, url)
-		return nil, ErrStatus
-	}
+		var orderResp OrderResponse
+		if err := json.Unmarshal(body, &orderResp); err != nil {
+			logger.Log.Error("ошибка при десериализации ответа", zap.Error(err))
+			return nil, ErrUnmarshal
+		}
 
-	return &orderResp, nil
+		if !orderResp.Status.isValid() {
+			logger.Log.Sugar().Infof("недопустимый статус заказа: %s, url: %s", orderResp.Status, url)
+			return nil, ErrStatus
+		}
+
+		return &orderResp, nil
+	}
 }
