@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -21,52 +20,54 @@ func TestHandlerService_Registration(t *testing.T) {
 	cfg := GetMockConfig()
 
 	providerMock := new(mocks.StorageProvider)
-
-	// Настройка поведения моков
-	providerMock.On("CreateUser", mock.Anything, mock.Anything, mock.Anything).Return(
-		func(ctx context.Context, login string, password string) error {
-			if login == "jack" {
-				return postgres.ErrConflict
-			}
-			return nil
-		})
 	service := New(providerMock, cfg)
 	r := service.GetRouter()
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 
 	testCases := []struct {
-		name         string
-		method       string
-		body         any
-		expectedCode int
-		expectedBody string
+		name          string
+		method        string
+		body          any
+		expectedCode  int
+		expectedBody  string
+		user          string
+		expectedError error
 	}{
 		{
-			name:         "успешный кейс",
-			method:       http.MethodPost,
-			body:         models.Credantials{Login: "user", Password: "password"},
-			expectedCode: http.StatusOK,
-			expectedBody: "Bearer",
+			name:          "успешный кейс",
+			method:        http.MethodPost,
+			body:          models.Credantials{Login: "user", Password: "password"},
+			expectedCode:  http.StatusOK,
+			expectedBody:  "Bearer",
+			user:          "user",
+			expectedError: nil,
 		},
 		{
-			name:         "пустое тело запроса",
-			method:       http.MethodPost,
-			body:         nil,
-			expectedCode: http.StatusBadRequest,
-			expectedBody: "",
+			name:          "пустое тело запроса",
+			method:        http.MethodPost,
+			body:          nil,
+			expectedCode:  http.StatusBadRequest,
+			expectedBody:  "",
+			user:          "",
+			expectedError: nil,
 		},
 		{
-			name:         "имя уже занято",
-			method:       http.MethodPost,
-			body:         models.Credantials{Login: "jack", Password: "password"},
-			expectedCode: http.StatusConflict,
-			expectedBody: "",
+			name:          "имя уже занято",
+			method:        http.MethodPost,
+			body:          models.Credantials{Login: "jack", Password: "password"},
+			expectedCode:  http.StatusConflict,
+			expectedBody:  "",
+			user:          "jack",
+			expectedError: postgres.ErrConflict,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Настройка поведения моков
+			providerMock.On("CreateUser", mock.Anything, tc.user, mock.Anything).Return(tc.expectedError)
+
 			// Подготовка тела запроса
 			var buf bytes.Buffer
 			if tc.body != nil {

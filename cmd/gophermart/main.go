@@ -10,7 +10,10 @@ import (
 
 func main() {
 	// получаем конфигурацию
-	cfg := config.GetConfig()
+	cfg, err := config.GetConfig()
+	if err != nil {
+		panic(err)
+	}
 
 	// инициализируем логер
 	if err := logger.Initialize(cfg.LogLevel); err != nil {

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -23,48 +22,50 @@ func TestHandlerService_Withdraw(t *testing.T) {
 
 	providerMock := new(mocks.StorageProvider)
 	token, _ := jwt.BuildJWTString("user", cfg.TokenSecret)
-
-	// Настройка поведения моков
-	providerMock.On("Withdrow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(
-		func(ctx context.Context, sum float64, userLogin string, order string) error {
-			if sum == 1000 {
-				return postgres.ErrFewPoints
-			}
-			return nil
-		})
 	service := New(providerMock, cfg)
 	r := service.GetRouter()
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 
 	testCases := []struct {
-		name         string
-		method       string
-		body         any
-		expectedCode int
+		name          string
+		method        string
+		body          any
+		expectedCode  int
+		sum           float64
+		expectedError error
 	}{
 		{
-			name:         "успешный кейс",
-			method:       http.MethodPost,
-			body:         models.OrderSum{Sum: 100, Order: "2377225624"},
-			expectedCode: http.StatusOK,
+			name:          "успешный кейс",
+			method:        http.MethodPost,
+			body:          models.OrderSum{Sum: 100, Order: "2377225624"},
+			expectedCode:  http.StatusOK,
+			sum:           100,
+			expectedError: nil,
 		},
 		{
-			name:         "не валидный номер заказа",
-			method:       http.MethodPost,
-			body:         models.OrderSum{Sum: 200, Order: "12345"},
-			expectedCode: http.StatusUnprocessableEntity,
+			name:          "не валидный номер заказа",
+			method:        http.MethodPost,
+			body:          models.OrderSum{Sum: 200, Order: "12345"},
+			expectedCode:  http.StatusUnprocessableEntity,
+			sum:           200,
+			expectedError: nil,
 		},
 		{
-			name:         "недостаточно средств",
-			method:       http.MethodPost,
-			body:         models.OrderSum{Sum: 1000, Order: "2377225624"},
-			expectedCode: http.StatusPaymentRequired,
+			name:          "недостаточно средств",
+			method:        http.MethodPost,
+			body:          models.OrderSum{Sum: 1000, Order: "2377225624"},
+			expectedCode:  http.StatusPaymentRequired,
+			sum:           1000,
+			expectedError: postgres.ErrFewPoints,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Настройка поведения моков
+			providerMock.On("Withdrow", mock.Anything, tc.sum, mock.Anything, mock.Anything).Return(tc.expectedError)
+
 			// Подготовка тела запроса
 			var buf bytes.Buffer
 			if tc.body != nil {

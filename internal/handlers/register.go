@@ -80,7 +80,13 @@ func decodeAndValidateBody(w http.ResponseWriter, r *http.Request, dst interface
 
 	validate := validator.New()
 	if err := validate.Struct(dst); err != nil {
-		validateErr := err.(validator.ValidationErrors)
+		validateErr, ok := err.(validator.ValidationErrors)
+		if !ok {
+			logger.Log.Error("unexpected error type", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			render.JSON(w, r, models.Error("internal server error"))
+			return err
+		}
 		logger.Log.Error("request validate error", zap.Error(err))
 		w.WriteHeader(http.StatusBadRequest)
 		render.JSON(w, r, models.ValidationError(validateErr))

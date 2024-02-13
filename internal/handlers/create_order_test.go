@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -21,56 +20,52 @@ func TestHandlerService_CreateOrder(t *testing.T) {
 	providerMock := new(mocks.StorageProvider)
 	token, _ := jwt.BuildJWTString("user", cfg.TokenSecret)
 
-	// Настройка поведения моков
-	providerMock.On("CreateOrder", mock.Anything, mock.Anything, mock.Anything).Return(
-		func(ctx context.Context, number string, login string) error {
-			if number == "4111111111111111" {
-				return postgres.ErrOrderAlredyExist
-			}
-			if number == "2377225624" {
-				return postgres.ErrCreatedByOtherUser
-			}
-			return nil
-		})
 	service := New(providerMock, cfg)
 	r := service.GetRouter()
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 
 	testCases := []struct {
-		name         string
-		method       string
-		body         string
-		expectedCode int
+		name          string
+		method        string
+		body          string
+		expectedCode  int
+		expectedError error
 	}{
 		{
-			name:         "успешный кейс",
-			method:       http.MethodPost,
-			body:         "79927398713",
-			expectedCode: http.StatusAccepted,
+			name:          "успешный кейс",
+			method:        http.MethodPost,
+			body:          "79927398713",
+			expectedCode:  http.StatusAccepted,
+			expectedError: nil,
 		},
 		{
-			name:         "был загружен ранее",
-			method:       http.MethodPost,
-			body:         "4111111111111111",
-			expectedCode: http.StatusOK,
+			name:          "был загружен ранее",
+			method:        http.MethodPost,
+			body:          "4111111111111111",
+			expectedCode:  http.StatusOK,
+			expectedError: postgres.ErrOrderAlredyExist,
 		},
 		{
-			name:         "был загружен другим юзером",
-			method:       http.MethodPost,
-			body:         "2377225624",
-			expectedCode: http.StatusConflict,
+			name:          "был загружен другим юзером",
+			method:        http.MethodPost,
+			body:          "2377225624",
+			expectedCode:  http.StatusConflict,
+			expectedError: postgres.ErrCreatedByOtherUser,
 		},
 		{
-			name:         "не валидный номер",
-			method:       http.MethodPost,
-			body:         "237722562444",
-			expectedCode: http.StatusUnprocessableEntity,
+			name:          "не валидный номер",
+			method:        http.MethodPost,
+			body:          "237722562444",
+			expectedCode:  http.StatusUnprocessableEntity,
+			expectedError: nil,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Настройка поведения моков
+			providerMock.On("CreateOrder", mock.Anything, tc.body, "user").Return(tc.expectedError)
 
 			body := bytes.NewBufferString(tc.body)
 			// Создание запроса

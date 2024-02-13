@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/signal"
 	"sync"
 	"syscall"
@@ -18,30 +17,29 @@ import (
 func (h *HandlerService) UpdateOrdersStatus(wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	// будем проверять заказы в статусе REGISTERED раз в минуту
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(time.Duration(h.cfg.CheckOrderInterval) * time.Second)
+	defer ticker.Stop()
 
-	// Канал для перехвата сигналов завершения работы
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	for {
 		select {
 		case order := <-h.orderChan:
 			// загружен новый заказ, делаем запрос в систему лояльности
-			h.orderProccessed(order)
+			h.orderProccessed(ctx, order)
 
 		case <-ticker.C:
 			// сработал таймер
-			registeredOrders := h.getOrders()
-			h.startProccessed(registeredOrders)
-		case <-sigChan:
+			registeredOrders := h.getOrders(ctx)
+			h.startProccessed(ctx, registeredOrders)
+		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (h *HandlerService) startProccessed(orders []string) {
+func (h *HandlerService) startProccessed(ctx context.Context, orders []string) {
 	if len(orders) == 0 {
 		return
 	}
@@ -50,15 +48,13 @@ func (h *HandlerService) startProccessed(orders []string) {
 		// Избегаем проблемы захвата переменной в замыкании, копируя значение в локальную переменную цикла
 		order := order
 		go func() {
-			h.orderProccessed(order)
+			h.orderProccessed(ctx, order)
 		}()
 	}
 
 }
 
-func (h *HandlerService) getOrders() []string {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+func (h *HandlerService) getOrders(ctx context.Context) []string {
 	orders, err := h.provider.GetRegisteresOrders(ctx)
 	if err != nil {
 		logger.Log.Error("cannot get orders", zap.Error(err))
@@ -67,19 +63,18 @@ func (h *HandlerService) getOrders() []string {
 	return orders
 }
 
-func (h *HandlerService) orderProccessed(order string) {
+func (h *HandlerService) orderProccessed(ctx context.Context, order string) {
 	orderResp, err := loyalty.GetPointsByOrder(fmt.Sprintf("%s/api/orders/%s", h.cfg.AcrualURL, order))
 	if err != nil {
+		logger.Log.Error("не удалось получить данные по заказу", zap.Error(err))
 		return
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
 	// обмновляем данные по заказу и пополняем баланс пользователя
 	errDB := h.provider.UpdateOrderAndAccrualPoints(ctx, orderResp)
 	if errDB != nil {
 		logger.Log.Error("не удалось обновить заказ", zap.Error(err))
+		return
 	}
 
 	logger.Log.Sugar().Infof("заказ %s обработан. Записан статус: %s", order, orderResp.Status)

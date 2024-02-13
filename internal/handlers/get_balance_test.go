@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -29,13 +28,6 @@ func TestHandlerService_GetBalance(t *testing.T) {
 		Withdrawn: 43,
 	}
 
-	providerMock.On("GetUserBalance", mock.Anything, mock.Anything).Return(
-		func(ctx context.Context, userLogin string) models.Balance {
-			if userLogin == "user" {
-				return models.Balance{}
-			}
-			return mockBalance
-		}, nil)
 	service := New(providerMock, cfg)
 	r := service.GetRouter()
 	srv := httptest.NewServer(r)
@@ -47,6 +39,7 @@ func TestHandlerService_GetBalance(t *testing.T) {
 		expectedCode int
 		token        string
 		expectedBody models.Balance
+		user         string
 	}{
 		{
 			name:         "успешный кейс",
@@ -54,6 +47,7 @@ func TestHandlerService_GetBalance(t *testing.T) {
 			expectedCode: http.StatusOK,
 			token:        token2,
 			expectedBody: mockBalance,
+			user:         "jack",
 		},
 		{
 			name:         "нет баланса",
@@ -61,11 +55,13 @@ func TestHandlerService_GetBalance(t *testing.T) {
 			expectedCode: http.StatusOK,
 			token:        token,
 			expectedBody: models.Balance{},
+			user:         "user",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			providerMock.On("GetUserBalance", mock.Anything, tc.user).Return(tc.expectedBody, nil)
 			// Создание запроса
 			req, err := http.NewRequest(tc.method, srv.URL+"/api/user/balance", nil)
 			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tc.token))

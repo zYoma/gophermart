@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -48,43 +47,44 @@ func TestHandlerService_GetOrders(t *testing.T) {
 		},
 	}
 
-	providerMock.On("GetUserOrders", mock.Anything, mock.Anything).Return(
-		mockOrders, func(ctx context.Context, userLogin string) error {
-			if userLogin == "user" {
-				return postgres.ErrOrdersNotFound
-			}
-			return nil
-		})
 	service := New(providerMock, cfg)
 	r := service.GetRouter()
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 
 	testCases := []struct {
-		name         string
-		method       string
-		expectedCode int
-		token        string
-		expectedBody models.Orders
+		name          string
+		method        string
+		expectedCode  int
+		token         string
+		expectedBody  models.Orders
+		user          string
+		expectedError error
 	}{
 		{
-			name:         "успешный кейс",
-			method:       http.MethodGet,
-			expectedCode: http.StatusOK,
-			token:        token2,
-			expectedBody: models.Orders(mockOrders),
+			name:          "успешный кейс",
+			method:        http.MethodGet,
+			expectedCode:  http.StatusOK,
+			token:         token2,
+			expectedBody:  models.Orders(mockOrders),
+			user:          "jack",
+			expectedError: nil,
 		},
 		{
-			name:         "нет заказов",
-			method:       http.MethodGet,
-			expectedCode: http.StatusNoContent,
-			token:        token,
-			expectedBody: nil,
+			name:          "нет заказов",
+			method:        http.MethodGet,
+			expectedCode:  http.StatusNoContent,
+			token:         token,
+			expectedBody:  nil,
+			user:          "user",
+			expectedError: postgres.ErrOrdersNotFound,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			providerMock.On("GetUserOrders", mock.Anything, tc.user).Return(mockOrders, tc.expectedError)
+
 			// Создание запроса
 			req, err := http.NewRequest(tc.method, srv.URL+"/api/user/orders", nil)
 			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tc.token))

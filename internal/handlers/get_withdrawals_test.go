@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -39,43 +38,43 @@ func TestHandlerService_GetWithdrawals(t *testing.T) {
 		},
 	}
 
-	providerMock.On("GetUserWithdrawals", mock.Anything, mock.Anything).Return(
-		mockWithdrawals, func(ctx context.Context, userLogin string) error {
-			if userLogin == "user" {
-				return postgres.ErrWithdrawalsNotFound
-			}
-			return nil
-		})
 	service := New(providerMock, cfg)
 	r := service.GetRouter()
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 
 	testCases := []struct {
-		name         string
-		method       string
-		expectedCode int
-		token        string
-		expectedBody models.Withdrawals
+		name          string
+		method        string
+		expectedCode  int
+		token         string
+		expectedBody  models.Withdrawals
+		user          string
+		expectedError error
 	}{
 		{
-			name:         "успешный кейс",
-			method:       http.MethodGet,
-			expectedCode: http.StatusOK,
-			token:        token2,
-			expectedBody: models.Withdrawals(mockWithdrawals),
+			name:          "успешный кейс",
+			method:        http.MethodGet,
+			expectedCode:  http.StatusOK,
+			token:         token2,
+			expectedBody:  models.Withdrawals(mockWithdrawals),
+			user:          "jack",
+			expectedError: nil,
 		},
 		{
-			name:         "нет списаний",
-			method:       http.MethodGet,
-			expectedCode: http.StatusNoContent,
-			token:        token,
-			expectedBody: nil,
+			name:          "нет списаний",
+			method:        http.MethodGet,
+			expectedCode:  http.StatusNoContent,
+			token:         token,
+			expectedBody:  nil,
+			user:          "user",
+			expectedError: postgres.ErrWithdrawalsNotFound,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			providerMock.On("GetUserWithdrawals", mock.Anything, tc.user).Return(mockWithdrawals, tc.expectedError)
 			// Создание запроса
 			req, err := http.NewRequest(tc.method, srv.URL+"/api/user/withdrawals", nil)
 			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", tc.token))
