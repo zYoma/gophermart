@@ -68,7 +68,7 @@ func (h *HandlerService) orderProccessed(ctx context.Context, order string) {
 	orderResp, err := loyalty.GetPointsByOrder(fmt.Sprintf("%s/api/orders/%s", h.cfg.AcrualURL, order))
 	if err != nil {
 		if errors.Is(err, loyalty.ErrNotFound) {
-			orderResp = &loyalty.OrderResponse{Order: order, Status: "INVALID"}
+			orderResp = &loyalty.OrderResponse{Order: order, Status: "PROCESSING"}
 		} else {
 			logger.Log.Error("не удалось получить данные по заказу", zap.Error(err))
 			return
