@@ -21,9 +21,9 @@ const (
 )
 
 type OrderResponse struct {
-	Order   string           `json:"order"`
-	Status  OrderStatus      `json:"status"`
-	Accrual *decimal.Decimal `json:"accrual,omitempty"`
+	Order   string          `json:"order"`
+	Status  OrderStatus     `json:"status"`
+	Accrual *AccrualWrapper `json:"accrual,omitempty"`
 }
 
 var ErrRequest = errors.New("request to loyalty")
@@ -73,4 +73,28 @@ func GetPointsByOrder(url string) (*OrderResponse, error) {
 	}
 
 	return &orderResp, nil
+}
+
+// AccrualWrapper обертка для корректной работы с decimal.Decimal в JSON.
+type AccrualWrapper struct {
+	decimal.Decimal
+}
+
+// UnmarshalJSON для корректного анмаршалинга из JSON.
+func (a *AccrualWrapper) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	d, err := decimal.NewFromString(s)
+	if err != nil {
+		return err
+	}
+	a.Decimal = d
+	return nil
+}
+
+// MarshalJSON для корректного маршалинга в JSON.
+func (a AccrualWrapper) MarshalJSON() ([]byte, error) {
+	return json.Marshal(a.String())
 }
