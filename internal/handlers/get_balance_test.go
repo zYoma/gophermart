@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -25,8 +24,8 @@ func TestHandlerService_GetBalance(t *testing.T) {
 
 	// Настройка поведения моков
 	mockBalance := models.Balance{
-		Current:   decimal.NewFromFloat(400),
-		Withdrawn: decimal.NewFromFloat(43),
+		Current:   400,
+		Withdrawn: 43,
 	}
 
 	service := New(providerMock, cfg)

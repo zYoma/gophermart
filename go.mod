@@ -10,7 +10,6 @@ require (
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v5 v5.5.1
 	github.com/pressly/goose v2.7.0+incompatible
-	github.com/shopspring/decimal v1.3.1
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.14.0

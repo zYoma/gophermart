@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 
-	"github.com/shopspring/decimal"
 	"github.com/zYoma/gophermart/internal/integrations/loyalty"
 	"github.com/zYoma/gophermart/internal/models"
 )
@@ -21,6 +20,6 @@ type Provider interface {
 	UpdateOrderAndAccrualPoints(ctx context.Context, orderData *loyalty.OrderResponse) error
 	GetUserOrders(ctx context.Context, userLogin string) ([]models.Order, error)
 	GetUserBalance(ctx context.Context, userLogin string) (models.Balance, error)
-	Withdrow(ctx context.Context, sum decimal.Decimal, userLogin string, order string) error
+	Withdrow(ctx context.Context, sum float64, userLogin string, order string) error
 	GetUserWithdrawals(ctx context.Context, userLogin string) ([]models.Withdrawn, error)
 }

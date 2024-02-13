@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -33,31 +32,31 @@ func TestHandlerService_Withdraw(t *testing.T) {
 		method        string
 		body          any
 		expectedCode  int
-		sum           decimal.Decimal
+		sum           float64
 		expectedError error
 	}{
 		{
 			name:          "успешный кейс",
 			method:        http.MethodPost,
-			body:          models.OrderSum{Sum: decimal.NewFromFloat(100), Order: "2377225624"},
+			body:          models.OrderSum{Sum: 100, Order: "2377225624"},
 			expectedCode:  http.StatusOK,
-			sum:           decimal.NewFromFloat(100),
+			sum:           100,
 			expectedError: nil,
 		},
 		{
 			name:          "не валидный номер заказа",
 			method:        http.MethodPost,
-			body:          models.OrderSum{Sum: decimal.NewFromFloat(200), Order: "12345"},
+			body:          models.OrderSum{Sum: 200, Order: "12345"},
 			expectedCode:  http.StatusUnprocessableEntity,
-			sum:           decimal.NewFromFloat(200),
+			sum:           200,
 			expectedError: nil,
 		},
 		{
 			name:          "недостаточно средств",
 			method:        http.MethodPost,
-			body:          models.OrderSum{Sum: decimal.NewFromFloat(1000), Order: "2377225624"},
+			body:          models.OrderSum{Sum: 1000, Order: "2377225624"},
 			expectedCode:  http.StatusPaymentRequired,
-			sum:           decimal.NewFromFloat(1000),
+			sum:           1000,
 			expectedError: postgres.ErrFewPoints,
 		},
 	}

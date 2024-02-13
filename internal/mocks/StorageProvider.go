@@ -5,10 +5,8 @@ package mocks
 import (
 	context "context"
 
-	decimal "github.com/shopspring/decimal"
-	loyalty "github.com/zYoma/gophermart/internal/integrations/loyalty"
-
 	mock "github.com/stretchr/testify/mock"
+	loyalty "github.com/zYoma/gophermart/internal/integrations/loyalty"
 
 	models "github.com/zYoma/gophermart/internal/models"
 )
@@ -237,7 +235,7 @@ func (_m *StorageProvider) UpdateOrderAndAccrualPoints(ctx context.Context, orde
 }
 
 // Withdrow provides a mock function with given fields: ctx, sum, userLogin, order
-func (_m *StorageProvider) Withdrow(ctx context.Context, sum decimal.Decimal, userLogin string, order string) error {
+func (_m *StorageProvider) Withdrow(ctx context.Context, sum float64, userLogin string, order string) error {
 	ret := _m.Called(ctx, sum, userLogin, order)
 
 	if len(ret) == 0 {
@@ -245,7 +243,7 @@ func (_m *StorageProvider) Withdrow(ctx context.Context, sum decimal.Decimal, us
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, decimal.Decimal, string, string) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, float64, string, string) error); ok {
 		r0 = rf(ctx, sum, userLogin, order)
 	} else {
 		r0 = ret.Error(0)
