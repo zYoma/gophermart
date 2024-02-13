@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/zYoma/gophermart/internal/app/tasks"
 	"github.com/zYoma/gophermart/internal/config"
 	"github.com/zYoma/gophermart/internal/handlers"
 	"github.com/zYoma/gophermart/internal/storage"
@@ -19,14 +20,15 @@ func New(
 	provider storage.Provider,
 	cfg *config.Config,
 ) *HTTPServer {
+	orderChan := make(chan string, 1024)
 
 	// создаем сервис обработчик
-	service := handlers.New(provider, cfg)
+	service := handlers.New(provider, cfg, orderChan)
 
 	// запускаем горутину для обработки заказов
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go service.UpdateOrdersStatus(&wg)
+	go tasks.UpdateOrdersStatus(cfg, &wg, provider, orderChan)
 
 	// получаем роутер
 	router := service.GetRouter()

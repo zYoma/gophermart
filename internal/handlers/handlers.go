@@ -12,8 +12,8 @@ type HandlerService struct {
 	orderChan chan string
 }
 
-func New(provider storage.Provider, cfg *config.Config) *HandlerService {
-	return &HandlerService{provider: provider, cfg: cfg, orderChan: make(chan string, 1024)}
+func New(provider storage.Provider, cfg *config.Config, orderChan chan string) *HandlerService {
+	return &HandlerService{provider: provider, cfg: cfg, orderChan: orderChan}
 }
 
 func (h *HandlerService) GetRouter() chi.Router {

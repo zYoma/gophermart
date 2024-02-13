@@ -1,4 +1,4 @@
-package handlers
+package tasks
 
 import (
 	"context"
@@ -9,16 +9,18 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/zYoma/gophermart/internal/config"
 	"github.com/zYoma/gophermart/internal/integrations/loyalty"
 	"github.com/zYoma/gophermart/internal/logger"
+	"github.com/zYoma/gophermart/internal/storage"
 	"go.uber.org/zap"
 )
 
 // с определённым интервалом проверяет начисления в системе лояльности для заказов в статусе REGISTERED
-func (h *HandlerService) UpdateOrdersStatus(wg *sync.WaitGroup) {
+func UpdateOrdersStatus(cfg *config.Config, wg *sync.WaitGroup, provider storage.Provider, orderChan chan string) {
 	defer wg.Done()
 
-	ticker := time.NewTicker(time.Duration(h.cfg.CheckOrderInterval) * time.Second)
+	ticker := time.NewTicker(time.Duration(cfg.CheckOrderInterval) * time.Second)
 	defer ticker.Stop()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -26,21 +28,21 @@ func (h *HandlerService) UpdateOrdersStatus(wg *sync.WaitGroup) {
 
 	for {
 		select {
-		case order := <-h.orderChan:
+		case order := <-orderChan:
 			// загружен новый заказ, делаем запрос в систему лояльности
-			h.orderProccessed(ctx, order)
+			orderProccessed(ctx, order, provider, cfg)
 
 		case <-ticker.C:
 			// сработал таймер
-			registeredOrders := h.getOrders(ctx)
-			h.startProccessed(ctx, registeredOrders)
+			registeredOrders := getOrders(ctx, provider)
+			startProccessed(ctx, registeredOrders, provider, cfg)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (h *HandlerService) startProccessed(ctx context.Context, orders []string) {
+func startProccessed(ctx context.Context, orders []string, provider storage.Provider, cfg *config.Config) {
 	if len(orders) == 0 {
 		return
 	}
@@ -49,14 +51,14 @@ func (h *HandlerService) startProccessed(ctx context.Context, orders []string) {
 		// Избегаем проблемы захвата переменной в замыкании, копируя значение в локальную переменную цикла
 		order := order
 		go func() {
-			h.orderProccessed(ctx, order)
+			orderProccessed(ctx, order, provider, cfg)
 		}()
 	}
 
 }
 
-func (h *HandlerService) getOrders(ctx context.Context) []string {
-	orders, err := h.provider.GetRegisteresOrders(ctx)
+func getOrders(ctx context.Context, provider storage.Provider) []string {
+	orders, err := provider.GetRegisteresOrders(ctx)
 	if err != nil {
 		logger.Log.Error("cannot get orders", zap.Error(err))
 		return []string{}
@@ -64,8 +66,8 @@ func (h *HandlerService) getOrders(ctx context.Context) []string {
 	return orders
 }
 
-func (h *HandlerService) orderProccessed(ctx context.Context, order string) {
-	orderResp, err := loyalty.GetPointsByOrder(fmt.Sprintf("%s/api/orders/%s", h.cfg.AcrualURL, order))
+func orderProccessed(ctx context.Context, order string, provider storage.Provider, cfg *config.Config) {
+	orderResp, err := loyalty.GetPointsByOrder(fmt.Sprintf("%s/api/orders/%s", cfg.AcrualURL, order))
 	if err != nil {
 		if errors.Is(err, loyalty.ErrNotFound) {
 			orderResp = &loyalty.OrderResponse{Order: order, Status: "PROCESSING"}
@@ -76,7 +78,7 @@ func (h *HandlerService) orderProccessed(ctx context.Context, order string) {
 	}
 
 	// обмновляем данные по заказу и пополняем баланс пользователя
-	errDB := h.provider.UpdateOrderAndAccrualPoints(ctx, orderResp)
+	errDB := provider.UpdateOrderAndAccrualPoints(ctx, orderResp)
 	if errDB != nil {
 		logger.Log.Error("не удалось обновить заказ", zap.Error(err))
 		return

@@ -47,7 +47,7 @@ func TestHandlerService_GetOrders(t *testing.T) {
 		},
 	}
 
-	service := New(providerMock, cfg)
+	service := New(providerMock, cfg, make(chan string, 1024))
 	r := service.GetRouter()
 	srv := httptest.NewServer(r)
 	defer srv.Close()

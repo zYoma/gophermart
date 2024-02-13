@@ -20,7 +20,7 @@ func TestHandlerService_Registration(t *testing.T) {
 	cfg := GetMockConfig()
 
 	providerMock := new(mocks.StorageProvider)
-	service := New(providerMock, cfg)
+	service := New(providerMock, cfg, make(chan string, 1024))
 	r := service.GetRouter()
 	srv := httptest.NewServer(r)
 	defer srv.Close()

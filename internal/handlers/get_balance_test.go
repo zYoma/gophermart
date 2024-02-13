@@ -28,7 +28,7 @@ func TestHandlerService_GetBalance(t *testing.T) {
 		Withdrawn: 43,
 	}
 
-	service := New(providerMock, cfg)
+	service := New(providerMock, cfg, make(chan string, 1024))
 	r := service.GetRouter()
 	srv := httptest.NewServer(r)
 	defer srv.Close()
