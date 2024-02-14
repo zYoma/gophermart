@@ -152,7 +152,7 @@ func (s *Storage) CreateOrder(ctx context.Context, number string, login string) 
 		ON CONFLICT (number, user_login) DO UPDATE
 		SET user_login = EXCLUDED.user_login, updated_at = NOW()
         RETURNING user_login, (xmax = 0) AS is_created;
-    `, number, login, "PROCESSING")
+    `, number, login, "NEW")
 
 	err := row.Scan(&userLogin, &isCreated)
 	if err != nil {
@@ -172,11 +172,11 @@ func (s *Storage) CreateOrder(ctx context.Context, number string, login string) 
 
 }
 
-// получает заказы в статусе REGISTERED или PROCESSING
+// получает заказы в статусе REGISTERED или PROCESSING или NEW
 func (s *Storage) GetRegisteresOrders(ctx context.Context) ([]string, error) {
 
 	var orders []string
-	rows, err := s.pool.Query(ctx, `SELECT number FROM orders WHERE status = 'REGISTERED' OR status = 'PROCESSING';`)
+	rows, err := s.pool.Query(ctx, `SELECT number FROM orders WHERE status = 'REGISTERED' OR status = 'PROCESSING' OR status = 'NEW';`)
 	if err != nil {
 		logger.Log.Sugar().Errorf("Не удалось выполнить запрос: %s", err)
 		return nil, ErrRegisteresOrders
