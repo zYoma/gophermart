@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -58,7 +59,7 @@ func (h *HandlerService) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// в фоне сразу пробуем получить данные по заказу
-	go tasks.OrderProccessed(r.Context(), orderNumber, h.provider, h.cfg)
+	go tasks.OrderProccessed(context.Background(), orderNumber, h.provider, h.cfg)
 
 	w.WriteHeader(http.StatusAccepted)
 
