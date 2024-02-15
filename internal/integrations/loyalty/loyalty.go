@@ -50,7 +50,7 @@ func (s OrderStatus) isValid() bool {
 	}
 }
 
-func GetPointsByOrder(url string, pauseChan chan bool) (*OrderResponse, error) {
+func GetPointsByOrder(url string) (*OrderResponse, error) {
 	for {
 		pauseMutex.Lock()
 		for isPaused { // Ждём, пока флаг паузы активен

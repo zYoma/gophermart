@@ -21,26 +21,23 @@ func UpdateOrdersStatus(ctx context.Context, cfg *config.Config, wg *sync.WaitGr
 	ticker := time.NewTicker(time.Duration(cfg.CheckOrderInterval) * time.Second)
 	defer ticker.Stop()
 
-	pauseChan := make(chan bool)
-	defer close(pauseChan)
-
 	for {
 		select {
 		case order := <-orderChan:
 			// загружен новый заказ, делаем запрос в систему лояльности
-			orderProccessed(ctx, order, provider, cfg, pauseChan)
+			orderProccessed(ctx, order, provider, cfg)
 
 		case <-ticker.C:
 			// сработал таймер
 			registeredOrders := getOrders(ctx, provider)
-			startProccessed(ctx, registeredOrders, provider, cfg, pauseChan)
+			startProccessed(ctx, registeredOrders, provider, cfg)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func startProccessed(ctx context.Context, orders []string, provider storage.Provider, cfg *config.Config, pauseChan chan bool) {
+func startProccessed(ctx context.Context, orders []string, provider storage.Provider, cfg *config.Config) {
 	if len(orders) == 0 {
 		return
 	}
@@ -49,7 +46,7 @@ func startProccessed(ctx context.Context, orders []string, provider storage.Prov
 		// Избегаем проблемы захвата переменной в замыкании, копируя значение в локальную переменную цикла
 		order := order
 		go func() {
-			orderProccessed(ctx, order, provider, cfg, pauseChan)
+			orderProccessed(ctx, order, provider, cfg)
 		}()
 	}
 
@@ -64,8 +61,8 @@ func getOrders(ctx context.Context, provider storage.Provider) []string {
 	return orders
 }
 
-func orderProccessed(ctx context.Context, order string, provider storage.Provider, cfg *config.Config, pauseChan chan bool) {
-	orderResp, err := loyalty.GetPointsByOrder(fmt.Sprintf("%s/api/orders/%s", cfg.AcrualURL, order), pauseChan)
+func orderProccessed(ctx context.Context, order string, provider storage.Provider, cfg *config.Config) {
+	orderResp, err := loyalty.GetPointsByOrder(fmt.Sprintf("%s/api/orders/%s", cfg.AcrualURL, order))
 	if err != nil {
 		if errors.Is(err, loyalty.ErrNotFound) {
 			orderResp = &loyalty.OrderResponse{Order: order, Status: "PROCESSING"}
