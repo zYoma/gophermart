@@ -36,6 +36,7 @@ var (
 	ErrOrdersNotFound      = errors.New("orders for user not found")
 	ErrFewPoints           = errors.New("few points for operations")
 	ErrWithdrawalsNotFound = errors.New("withdrawals not found")
+	noFinalStatuses        = []string{"REGISTERED", "PROCESSING", "NEW"}
 )
 
 const MigrationDir = "./internal/storage/migrations"
@@ -172,11 +173,11 @@ func (s *Storage) CreateOrder(ctx context.Context, number string, login string) 
 
 }
 
-// получает заказы в статусе REGISTERED или PROCESSING или NEW
+// получает заказы с неконечным статусом
 func (s *Storage) GetRegisteresOrders(ctx context.Context) ([]string, error) {
 
 	var orders []string
-	rows, err := s.pool.Query(ctx, `SELECT number FROM orders WHERE status = 'REGISTERED' OR status = 'PROCESSING' OR status = 'NEW';`)
+	rows, err := s.pool.Query(ctx, `SELECT number FROM orders WHERE status in ($1);`, noFinalStatuses)
 	if err != nil {
 		logger.Log.Sugar().Errorf("Не удалось выполнить запрос: %s", err)
 		return nil, ErrRegisteresOrders

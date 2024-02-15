@@ -7,13 +7,12 @@ import (
 )
 
 type HandlerService struct {
-	provider  storage.Provider
-	cfg       *config.Config
-	orderChan chan string
+	provider storage.Provider
+	cfg      *config.Config
 }
 
-func New(provider storage.Provider, cfg *config.Config, orderChan chan string) *HandlerService {
-	return &HandlerService{provider: provider, cfg: cfg, orderChan: orderChan}
+func New(provider storage.Provider, cfg *config.Config) *HandlerService {
+	return &HandlerService{provider: provider, cfg: cfg}
 }
 
 func (h *HandlerService) GetRouter() chi.Router {

@@ -21,15 +21,14 @@ func New(
 	provider storage.Provider,
 	cfg *config.Config,
 ) *HTTPServer {
-	orderChan := make(chan string, 1024)
 
 	// создаем сервис обработчик
-	service := handlers.New(provider, cfg, orderChan)
+	service := handlers.New(provider, cfg)
 
 	// запускаем горутину для обработки заказов
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go tasks.UpdateOrdersStatus(ctx, cfg, &wg, provider, orderChan)
+	go tasks.UpdateOrdersStatus(ctx, cfg, &wg, provider)
 
 	// получаем роутер
 	router := service.GetRouter()

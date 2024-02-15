@@ -4,11 +4,11 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/render"
 	"go.uber.org/zap"
 
+	"github.com/zYoma/gophermart/internal/app/tasks"
 	"github.com/zYoma/gophermart/internal/logger"
 	"github.com/zYoma/gophermart/internal/models"
 	"github.com/zYoma/gophermart/internal/storage/postgres"
@@ -57,15 +57,8 @@ func (h *HandlerService) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go func() {
-		select {
-		case h.orderChan <- orderNumber:
-			// Успешно отправлено
-		case <-time.After(time.Second * 5):
-			// Обработка таймаута, возможно запись в лог
-			logger.Log.Error("timeout when sending to orderChan")
-		}
-	}()
+	// в фоне сразу пробуем получить данные по заказу
+	go tasks.OrderProccessed(r.Context(), orderNumber, h.provider, h.cfg)
 
 	w.WriteHeader(http.StatusAccepted)
 

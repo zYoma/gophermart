@@ -14,8 +14,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// с определённым интервалом проверяет начисления в системе лояльности для заказов в статусе REGISTERED
-func UpdateOrdersStatus(ctx context.Context, cfg *config.Config, wg *sync.WaitGroup, provider storage.Provider, orderChan chan string) {
+// с определённым интервалом проверяет начисления в системе лояльности для заказов с не конечными статусами
+func UpdateOrdersStatus(ctx context.Context, cfg *config.Config, wg *sync.WaitGroup, provider storage.Provider) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(time.Duration(cfg.CheckOrderInterval) * time.Second)
@@ -23,10 +23,6 @@ func UpdateOrdersStatus(ctx context.Context, cfg *config.Config, wg *sync.WaitGr
 
 	for {
 		select {
-		case order := <-orderChan:
-			// загружен новый заказ, делаем запрос в систему лояльности
-			orderProccessed(ctx, order, provider, cfg)
-
 		case <-ticker.C:
 			// сработал таймер
 			registeredOrders := getOrders(ctx, provider)
@@ -46,7 +42,7 @@ func startProccessed(ctx context.Context, orders []string, provider storage.Prov
 		// Избегаем проблемы захвата переменной в замыкании, копируя значение в локальную переменную цикла
 		order := order
 		go func() {
-			orderProccessed(ctx, order, provider, cfg)
+			OrderProccessed(ctx, order, provider, cfg)
 		}()
 	}
 
@@ -61,7 +57,7 @@ func getOrders(ctx context.Context, provider storage.Provider) []string {
 	return orders
 }
 
-func orderProccessed(ctx context.Context, order string, provider storage.Provider, cfg *config.Config) {
+func OrderProccessed(ctx context.Context, order string, provider storage.Provider, cfg *config.Config) {
 	orderResp, err := loyalty.GetPointsByOrder(fmt.Sprintf("%s/api/orders/%s", cfg.AcrualURL, order))
 	if err != nil {
 		if errors.Is(err, loyalty.ErrNotFound) {
