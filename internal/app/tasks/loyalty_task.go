@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/zYoma/gophermart/internal/config"
@@ -17,14 +15,11 @@ import (
 )
 
 // с определённым интервалом проверяет начисления в системе лояльности для заказов в статусе REGISTERED
-func UpdateOrdersStatus(cfg *config.Config, wg *sync.WaitGroup, provider storage.Provider, orderChan chan string) {
+func UpdateOrdersStatus(ctx context.Context, cfg *config.Config, wg *sync.WaitGroup, provider storage.Provider, orderChan chan string) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(time.Duration(cfg.CheckOrderInterval) * time.Second)
 	defer ticker.Stop()
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	pauseChan := make(chan bool)
 	defer close(pauseChan)
@@ -64,7 +59,7 @@ func getOrders(ctx context.Context, provider storage.Provider) []string {
 	orders, err := provider.GetRegisteresOrders(ctx)
 	if err != nil {
 		logger.Log.Error("cannot get orders", zap.Error(err))
-		return []string{}
+		return nil
 	}
 	return orders
 }

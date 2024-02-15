@@ -61,9 +61,9 @@ func GetConfig() (*Config, error) {
 		intValue, err := strconv.Atoi(envCheckOrderInterval)
 		if err != nil {
 			return nil, err
-		} else {
-			flagCheckOrderInterval = intValue
 		}
+		flagCheckOrderInterval = intValue
+
 	}
 
 	return &Config{

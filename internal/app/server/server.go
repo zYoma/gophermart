@@ -17,6 +17,7 @@ type HTTPServer struct {
 }
 
 func New(
+	ctx context.Context,
 	provider storage.Provider,
 	cfg *config.Config,
 ) *HTTPServer {
@@ -28,7 +29,7 @@ func New(
 	// запускаем горутину для обработки заказов
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go tasks.UpdateOrdersStatus(cfg, &wg, provider, orderChan)
+	go tasks.UpdateOrdersStatus(ctx, cfg, &wg, provider, orderChan)
 
 	// получаем роутер
 	router := service.GetRouter()

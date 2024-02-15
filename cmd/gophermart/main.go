@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"errors"
+	"os/signal"
+	"syscall"
 
 	"github.com/zYoma/gophermart/internal/app"
 	"github.com/zYoma/gophermart/internal/config"
@@ -20,14 +23,17 @@ func main() {
 		panic(err)
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	// инициализация приложения
-	application, err := app.New(cfg)
+	application, err := app.New(ctx, cfg)
 	if err != nil {
 		panic(err)
 	}
 
 	// запускаем приложение
-	if err := application.Run(); err != nil {
+	if err := application.Run(ctx); err != nil {
 		if errors.Is(err, app.ErrServerStoped) {
 			logger.Log.Sugar().Infoln("stopping application")
 			return

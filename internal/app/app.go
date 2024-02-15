@@ -4,9 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/zYoma/gophermart/internal/app/server"
 	"github.com/zYoma/gophermart/internal/config"
@@ -21,7 +18,7 @@ type App struct {
 
 var ErrServerStoped = errors.New("server stoped")
 
-func New(cfg *config.Config) (*App, error) {
+func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	provider, err := postgres.New(cfg)
 	if err != nil {
 		return nil, err
@@ -31,15 +28,11 @@ func New(cfg *config.Config) (*App, error) {
 		return nil, err
 	}
 
-	server := server.New(provider, cfg)
+	server := server.New(ctx, provider, cfg)
 	return &App{Server: server}, nil
 }
 
-func (s *App) Run() error {
-	// Контекст с отменой для остановки сервера
-	ctx, stop := context.WithCancel(context.Background())
-	defer stop()
-
+func (s *App) Run(ctx context.Context) error {
 	// Создание канала для ошибок
 	errChan := make(chan error)
 
@@ -51,12 +44,8 @@ func (s *App) Run() error {
 		}
 	}()
 
-	// Ожидание сигнала завершения работы
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
 	select {
-	case <-sigChan:
+	case <-ctx.Done():
 		// При получении сигнала завершения останавливаем сервер
 		if err := s.Server.Shutdown(ctx); err != nil {
 			return err
