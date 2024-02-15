@@ -14,26 +14,36 @@ import (
 	"go.uber.org/zap"
 )
 
-// с определённым интервалом проверяет начисления в системе лояльности для заказов с не конечными статусами
-func UpdateOrdersStatus(ctx context.Context, cfg *config.Config, wg *sync.WaitGroup, provider storage.Provider) {
-	defer wg.Done()
+type TaskService struct {
+	provider storage.Provider
+	cfg      *config.Config
+	wg       *sync.WaitGroup
+}
 
-	ticker := time.NewTicker(time.Duration(cfg.CheckOrderInterval) * time.Second)
+func New(provider storage.Provider, cfg *config.Config, wg *sync.WaitGroup) *TaskService {
+	return &TaskService{provider: provider, cfg: cfg, wg: wg}
+}
+
+// с определённым интервалом проверяет начисления в системе лояльности для заказов с не конечными статусами
+func (t *TaskService) UpdateOrdersStatus(ctx context.Context) {
+	defer t.wg.Done()
+
+	ticker := time.NewTicker(time.Duration(t.cfg.CheckOrderInterval) * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
 			// сработал таймер
-			registeredOrders := getOrders(ctx, provider)
-			startProccessed(ctx, registeredOrders, provider, cfg)
+			registeredOrders := t.getOrders(ctx)
+			t.startProccessed(ctx, registeredOrders)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func startProccessed(ctx context.Context, orders []string, provider storage.Provider, cfg *config.Config) {
+func (t *TaskService) startProccessed(ctx context.Context, orders []string) {
 	if len(orders) == 0 {
 		return
 	}
@@ -42,14 +52,14 @@ func startProccessed(ctx context.Context, orders []string, provider storage.Prov
 		// Избегаем проблемы захвата переменной в замыкании, копируя значение в локальную переменную цикла
 		order := order
 		go func() {
-			OrderProccessed(ctx, order, provider, cfg)
+			OrderProccessed(ctx, order, t.provider, t.cfg)
 		}()
 	}
 
 }
 
-func getOrders(ctx context.Context, provider storage.Provider) []string {
-	orders, err := provider.GetRegisteresOrders(ctx)
+func (t *TaskService) getOrders(ctx context.Context) []string {
+	orders, err := t.provider.GetRegisteresOrders(ctx)
 	if err != nil {
 		logger.Log.Error("cannot get orders", zap.Error(err))
 		return nil

@@ -18,7 +18,7 @@ func TestHandlerService_Login(t *testing.T) {
 	cfg := GetMockConfig()
 
 	providerMock := new(mocks.StorageProvider)
-	service := New(providerMock, cfg, make(chan string, 1024))
+	service := New(providerMock, cfg)
 	r := service.GetRouter()
 	srv := httptest.NewServer(r)
 	defer srv.Close()

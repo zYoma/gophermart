@@ -28,7 +28,8 @@ func New(
 	// запускаем горутину для обработки заказов
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go tasks.UpdateOrdersStatus(ctx, cfg, &wg, provider)
+	taskService := tasks.New(provider, cfg, &wg)
+	go taskService.UpdateOrdersStatus(ctx)
 
 	// получаем роутер
 	router := service.GetRouter()

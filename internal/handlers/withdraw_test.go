@@ -22,7 +22,7 @@ func TestHandlerService_Withdraw(t *testing.T) {
 
 	providerMock := new(mocks.StorageProvider)
 	token, _ := jwt.BuildJWTString("user", cfg.TokenSecret)
-	service := New(providerMock, cfg, make(chan string, 1024))
+	service := New(providerMock, cfg)
 	r := service.GetRouter()
 	srv := httptest.NewServer(r)
 	defer srv.Close()
